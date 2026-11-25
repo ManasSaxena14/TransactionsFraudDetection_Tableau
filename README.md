@@ -1,168 +1,146 @@
-# Financial Transactions Fraud Detection & Analysis
+<div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Pandas](https://img.shields.io/badge/Pandas-Data%20Processing-150458.svg)
-![Tableau](https://img.shields.io/badge/Tableau-Dashboard-E97627.svg)
-![Status](https://img.shields.io/badge/Status-Completed-success.svg)
+# Transaction Fraud Analysis
 
-An end-to-end data analysis and data engineering pipeline for detecting fraudulent behavior across 1 million financial transactions. This project encompasses comprehensive ETL processes, exploratory data analysis (EDA), statistical modeling, network analysis, and interactive Tableau visualizations.
+**One million card transactions, 17,143 of them fraudulent.<br>What do the fraudulent ones have in common?**
 
----
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
+![pandas](https://img.shields.io/badge/pandas-ETL-150458?logo=pandas&logoColor=white)
+![Jupyter](https://img.shields.io/badge/Jupyter-5_notebooks-F37626?logo=jupyter&logoColor=white)
+![Tableau](https://img.shields.io/badge/Tableau-dashboard-E97627)
 
-## Table of Contents
-1. [Executive Summary](#executive-summary)
-2. [Project Objectives](#project-objectives)
-3. [Dataset Overview](#dataset-overview)
-4. [Methodology & Pipeline](#methodology--pipeline)
-5. [Key Insights & Findings](#key-insights--findings)
-6. [Tech Stack](#tech-stack)
-7. [Repository Structure](#repository-structure)
-8. [Getting Started](#getting-started)
-9. [Future Work](#future-work)
+[**Open the dashboard**](https://public.tableau.com/app/profile/manas.saxena/viz/FraudDetectionAnalysis_17774564367470/FraudMonitoringDashboard) ·
+[Findings](#findings) ·
+[Run it](#run-it) ·
+[Data](#data) ·
+[Credits](#credits)
+
+</div>
 
 ---
 
-## Executive Summary
-Financial fraud poses a significant threat to digital banking, resulting in substantial losses through unauthorized transactions. This project analyzes a comprehensive dataset of **1,000,000 transactions** across **50,000 accounts** spanning a three-year period (2022–2024). Through rigorous data processing, feature engineering, and statistical analysis, we successfully identified critical fraud patterns, developed account risk indicators, and isolated **$12.52M** in fraudulent activities, which accounted for **1.71%** of the total transaction volume.
+## At a glance
 
-## Project Objectives
-- **Data Engineering:** Architect a robust ETL (Extract, Transform, Load) pipeline to clean and transform raw datasets into structured, analytical-ready features.
-- **Exploratory Data Analysis (EDA):** Uncover hidden trends, temporal patterns, and geographic distributions of anomalous activities.
-- **Statistical Modeling & Risk Scoring:** Develop account-level risk profiles and pinpoint high-risk merchant categories.
-- **Network Analysis:** Detect organized fraud rings through shared identifiers (IP addresses, devices, emails).
-- **Data Visualization:** Create an intuitive, high-impact Tableau dashboard allowing stakeholders to monitor KPIs and fraud metrics interactively.
+| Transactions | Accounts | Fraud cases | Fraud rate | Fraud value | Period |
+| :--: | :--: | :--: | :--: | :--: | :--: |
+| 1,000,000 | 50,000 | 17,143 | 1.71% | $12.52M | 2022 to 2024 |
 
----
+Fraud is 1.71% of transactions but **6.8% of the money**: $12.52M of $183.74M.
 
-## Dataset Overview
-The analysis leverages five relational datasets, meticulously processed and linked to provide a holistic view of user behavior:
+## Findings
 
-| File | Rows | Description |
-|---|---|---|
-| `transactions.csv` | 1,000,000 | Individual transaction records (amounts, categories, velocity, target label) |
-| `account_profiles.csv` | 50,000 | Account-level aggregates, historical risk scores, and 2FA status |
-| `fraud_patterns.csv` | 7 | Categorical lookup table detailing specific fraud types and aggregate statistics |
-| `network_edges.csv` | 7,411 | Account-to-account linkages used for fraud-ring and collusive behavior detection |
-| `time_series_stats.csv` | 26,280 | Hourly transaction and fraud metrics over a 3-year period |
+### 1. A new device is the clearest warning
 
-*Note: Due to file size constraints, `transactions.csv` is tracked via Git LFS.*
-**Detailed schema definitions can be found in [docs/data_dictionary.md](docs/data_dictionary.md).**
+| Signal | Fraud rate when true | Fraud rate when false | Difference |
+| :-- | --: | --: | --: |
+| Device not seen before | **8.72%** | 0.87% | 10x |
+| Foreign transaction | **3.40%** | 1.01% | 3.4x |
+| Between 00:00 and 05:59 | **2.79%** | 1.36% | 2.1x |
+| Account without 2FA | **2.03%** | 1.54% | 1.3x |
 
----
+### 2. Fraud comes fast and from risky addresses
 
-## Methodology & Pipeline
+| Average | Legitimate | Fraudulent |
+| :-- | --: | --: |
+| Transactions in the previous hour | 1.00 | **3.97** |
+| IP risk score (0 to 100) | 21.0 | **55.4** |
+| Amount, mean | $174 | **$730** |
+| Amount, median | $80 | **$241** |
 
-The project strictly follows a structured data science lifecycle:
+Transaction velocity has the strongest correlation with fraud (0.35), ahead of IP risk (0.27) and amount (0.23).
 
-```text
-Raw Data ➔ ETL Pipeline ➔ Feature Engineering ➔ EDA & Statistical Analysis ➔ Dashboarding
+### 3. Night is the risky time
+
+A quarter of transactions happen between midnight and 05:59, but they carry **40.7%** of the fraud. The day of the week barely matters.
+
+<img src="docs/images/fraud-by-hour.png" alt="Fraud rate by hour: about 2.8% from midnight to 5 AM, then about 1.3% through the day" width="720">
+
+### 4. Five merchant categories stand out
+
+Crypto (5.34%), money transfer (4.13%), gambling (3.57%), travel (2.61%) and electronics (2.28%). Every other category sits near 1.4%.
+
+<img src="docs/images/fraud-by-category.png" alt="Fraud rate by merchant category, highest for crypto and money transfer" width="720">
+
+### 5. The most common fraud isn't the only costly one
+
+| Type | Cases | Share | Average | Total |
+| :-- | --: | --: | --: | --: |
+| Card not present | 5,982 | 34.9% | $772 | **$4.62M** |
+| Account takeover | 3,432 | 20.0% | $1,203 | **$4.13M** |
+| Stolen card, present | 3,120 | 18.2% | $557 | $1.74M |
+| Identity theft | 656 | 3.8% | $1,164 | $0.76M |
+| Friendly fraud | 1,726 | 10.1% | $353 | $0.61M |
+| ATM fraud | 1,216 | 7.1% | $466 | $0.57M |
+| Money laundering | 1,011 | 5.9% | $94 | $0.09M |
+
+Account takeover has 43% fewer cases than card not present, yet costs almost as much.
+
+### 6. The account risk score doesn't help
+
+Accounts with and without fraud have the same average risk score (19.91). Behaviour at the time of the transaction tells you more than the account's history.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Five raw CSVs] --> B[ETL<br/>dates, nulls, types]
+    B --> C[Clean data]
+    C --> D[Exploration]
+    C --> E[Statistics]
+    C --> F[KPI tables]
+    F --> G[Tableau dashboard]
 ```
 
-1. **Extraction:** Loading and inspecting raw CSVs to identify structural issues and missing data.
-2. **Transformation (`scripts/etl_pipeline.py`):**
-   - Datetime parsing and timezone alignment.
-   - Type casting, deduplication, and Boolean standardization.
-   - Engineering temporal features (hour, day of week, weekend flags).
-   - Calculating behavioral features (transaction velocity, amount-to-average ratios).
-3. **Exploratory Analysis (`notebooks/`):** Deep dive into variable distributions, bivariate relationships, correlation matrices, and outlier detection.
-4. **Network Analysis:** Graphing connected accounts to flag coordinated fraud rings.
-5. **Loading:** Exporting clean, finalized datasets to `data/processed/` for Tableau ingestion and future Machine Learning model training.
+| Step | Where |
+| :-- | :-- |
+| Load and inspect | [`01_extraction`](notebooks/01_extraction.ipynb) |
+| Clean | [`02_cleaning`](notebooks/02_cleaning.ipynb), [`scripts/`](scripts) |
+| Explore | [`03_eda`](notebooks/03_eda.ipynb) |
+| Test and correlate | [`04_statistical_analysis`](notebooks/04_statistical_analysis.ipynb) |
+| Merge and build KPIs | [`05_final_load_prep`](notebooks/05_final_load_prep.ipynb) |
 
----
+## Run it
 
-## Key Insights & Findings
+You need Python 3.10 or later and about 400 MB of free space.
 
-Extensive exploratory and statistical analysis yielded the following critical business insights:
+```bash
+git clone https://github.com/ManasSaxena14/TransactionsFraudDetection_Tableau.git
+cd TransactionsFraudDetection_Tableau
 
-- **Primary Attack Vector:** **Card Not Present (CNP)** transactions represent the most common fraud type, accounting for **34.9%** of all fraudulent activities.
-- **Financial Impact Discrepancy:** The average fraudulent transaction is significantly higher (**$730**) compared to legitimate transactions (**$174**), indicating targeted high-value attacks.
-- **High-Risk Categories:** The `crypto` (5.3% fraud rate) and `money_transfer` (4.1% fraud rate) merchant categories exhibit the highest susceptibility to fraud.
-- **Temporal Vulnerability:** Fraudsters are disproportionately active during off-hours, with approximately **40%** of fraud occurring between **midnight and 5 AM**.
-- **Security Posture Vulnerabilities:** Accounts lacking Two-Factor Authentication (2FA) are highly targeted, representing **~40%** of total fraud cases despite making up a smaller portion of the user base.
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt scipy
 
----
+# The transactions file (128 MB) is too large for this repository
+curl -L -o data/raw/transactions.csv \
+  https://media.githubusercontent.com/media/AnanyaSoni2004/E_G14_TransactionsFraudDetection/main/data/raw/transactions.csv
 
-## Tech Stack
-
-- **Data Engineering & Processing:** `Python`, `Pandas`, `NumPy`
-- **Exploratory Analysis & Stats:** `Jupyter Notebooks`, `SciPy`
-- **Data Visualization:** `Matplotlib`, `Seaborn`, `Plotly`, `Tableau`
-- **Version Control:** `Git`, `Git LFS`
-- **Web Portfolio:** `React 19`, `Vite 8`, `GitHub Pages`
-
----
-
-## Repository Structure
-
-```text
-.
-├── data/
-│   ├── raw/                  # Original CSV files (transactions tracked via Git LFS)
-│   └── processed/            # Cleaned data outputs from the ETL pipeline
-├── notebooks/                # Step-by-step Jupyter notebooks detailing the analysis
-│   ├── 01_extraction.ipynb
-│   ├── 02_cleaning.ipynb
-│   ├── 03_eda.ipynb
-│   ├── 04_statistical_analysis.ipynb
-│   └── 05_final_load_prep.ipynb
-├── scripts/                  # Modular Python scripts orchestrating the data pipeline
-│   ├── etl_pipeline.py       # Main orchestrator script
-│   ├── preprocess.py         # Parsing, null handling, and type casting
-│   ├── feature_engineering.py# Temporal and velocity feature creation
-│   └── utils.py              # I/O helper functions
-├── docs/                     # Documentation including full data dictionaries
-├── reports/                  # Project reports, presentation outlines, and templates
-├── tableau/                  # Tableau workbook files and dashboard screenshots
-├── DVA-focused-Portfolio/    # Source code for the DVA portfolio web application
-├── DVA-oriented-Resume/      # Resume assets and related files
-└── requirements.txt          # Python project dependencies
+python -m scripts.etl_pipeline
+jupyter notebook notebooks/
 ```
 
----
+The pipeline finishes with `Transactions: (1000000, 27)`. Run it before notebooks 03 to 05, which read its output.
 
-## Getting Started
+## Data
 
-### Prerequisites
-- Python 3.10+
-- Git Large File Storage (LFS)
+| File | Rows | What it holds |
+| :-- | --: | :-- |
+| `transactions.csv` | 1,000,000 | Amount, merchant, device, location, velocity and the fraud label |
+| `account_profiles.csv` | 50,000 | Account totals, risk score and 2FA status |
+| `time_series_stats.csv` | 26,280 | Hourly totals over three years |
+| `network_edges.csv` | 7,411 | Accounts sharing an IP, device, email domain or phone, in 200 rings |
+| `fraud_patterns.csv` | 7 | Summary of each fraud type |
 
-### Installation
+Every column is described in the [data dictionary](docs/data_dictionary.md).
 
-1. **Clone the repository and pull large files:**
-   ```bash
-   git clone https://github.com/AnanyaSoni2004/Global_Stock_Market_AnalysisDashboard
-   cd Global_Stock_Market_AnalysisDashboard
-   
-   # Git LFS is required for the large transactions.csv dataset
-   git lfs install
-   git lfs pull
-   ```
+## Limits
 
-2. **Set up a virtual environment (optional but highly recommended):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows, use: venv\Scripts\activate
-   ```
+- These are patterns in one dataset, not proof of cause, and no fraud model is trained here.
+- 59.5% of linked account pairs are both fraudulent, but the links were not sampled at random, so that is not a general rate.
+- In notebook 03, the legends on the amount and risk score charts have their labels swapped.
+- `data/processed/` holds Git LFS pointers. The pipeline replaces them with real files.
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Credits
 
-4. **Run the ETL Pipeline:**
-   Execute the pipeline to process raw data and generate the finalized datasets.
-   ```bash
-   python -m scripts.etl_pipeline
-   ```
+The analysis, code, notebooks and data dictionary come from [E_G14_TransactionsFraudDetection](https://github.com/AnanyaSoni2004/E_G14_TransactionsFraudDetection), a Data Visualization and Analytics capstone by team E_G14 at Newton School of Technology.
 
-5. **Launch Jupyter Notebooks for Interactive Analysis:**
-   ```bash
-   jupyter notebook
-   ```
-
----
-
-## Future Work
-- **Predictive Machine Learning Integration:** Train and deploy classification models (e.g., Random Forest, XGBoost) using the engineered features to identify fraudulent transactions in real-time.
-- **Deep Graph Analysis:** Utilize advanced Graph Neural Networks (GNNs) on `network_edges.csv` to improve the detection rate of sophisticated, multi-node fraud rings.
-- **Real-Time Streaming Architecture:** Migrate the current batch ETL pipeline to a streaming architecture utilizing Apache Kafka and PySpark for continuous, low-latency fraud monitoring.
+This repository adds a published [Tableau dashboard](https://public.tableau.com/app/profile/manas.saxena/viz/FraudDetectionAnalysis_17774564367470/FraudMonitoringDashboard), a fresh run of the pipeline with the findings rechecked, and this documentation.
